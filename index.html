@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<title>云盘归档 · GitHub 私有仓库</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23238636'/%3E%3Ctext x='50' y='68' font-size='56' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3E%E2%98%81%3C/text%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --text2: #8b949e; --accent: #238636;
+    --accent-hover: #2ea043; --danger: #f85149; --warn: #d29922;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    padding: 14px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 17px; font-weight: 600; }
+  .icon-btn { background: none; border: none; color: var(--text2); font-size: 22px; cursor: pointer; padding: 6px; border-radius: 8px; }
+  .icon-btn:hover { background: var(--border); color: var(--text); }
+  main { flex: 1; padding: 16px; max-width: 720px; margin: 0 auto; width: 100%; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+  label { font-size: 13px; color: var(--text2); min-width: 64px; }
+  input[type="text"], input[type="password"] {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 9px 12px; border-radius: 8px; font-size: 14px; outline: none;
+  }
+  input[type="text"]:focus, input[type="password"]:focus { border-color: var(--accent); }
+  .btn {
+    background: var(--accent); color: #fff; border: none; padding: 10px 18px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover:not(:disabled) { background: #3d444d; }
+  .btn-danger { background: var(--danger); }
+  .btn-danger:hover:not(:disabled) { background: #ff6b63; }
+  .picker {
+    border: 2px dashed var(--border); border-radius: 12px; padding: 32px 16px; text-align: center;
+    cursor: pointer; transition: border-color .2s; margin-bottom: 14px;
+  }
+  .picker:hover { border-color: var(--accent); }
+  .picker .big { font-size: 40px; margin-bottom: 8px; }
+  .picker p { color: var(--text2); font-size: 13px; }
+  .picker-actions { display: flex; gap: 10px; margin-bottom: 14px; }
+  .picker-actions .btn { font-size: 13px; padding: 8px 12px; }
+  .file-list { list-style: none; max-height: 320px; overflow-y: auto; }
+  .file-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .file-item:last-child { border-bottom: none; }
+  .file-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+  .file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .file-size { color: var(--text2); font-size: 12px; flex-shrink: 0; }
+  .file-status { font-size: 12px; flex-shrink: 0; min-width: 50px; text-align: right; }
+  .status-pending { color: var(--text2); }
+  .status-uploading { color: var(--warn); }
+  .status-success { color: var(--accent); }
+  .status-error { color: var(--danger); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .toolbar label { display: flex; align-items: center; gap: 6px; cursor: pointer; min-width: auto; font-size: 14px; color: var(--text); }
+  .count { color: var(--text2); font-size: 13px; }
+  .progress-wrap { margin-top: 12px; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .progress-text { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .log {
+    background: #010409; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; font-family: ui-monospace, monospace; font-size: 12px;
+    max-height: 160px; overflow-y: auto; margin-top: 12px; white-space: pre-wrap; word-break: break-all;
+  }
+  .log .ok { color: var(--accent); }
+  .log .err { color: var(--danger); }
+  .log .warn { color: var(--warn); }
+  .hidden { display: none !important; }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex;
+    align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 420px; width: 100%; }
+  .modal h3 { margin-bottom: 12px; }
+  .modal p { color: var(--text2); font-size: 14px; margin-bottom: 16px; }
+  .modal .btn + .btn { margin-top: 8px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-private { background: #1f6feb33; color: #58a6ff; }
+  footer { text-align: center; padding: 16px; color: var(--text2); font-size: 12px; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>☁️ 云盘归档</h1>
+  <button class="icon-btn" id="settingsBtn" title="设置">⚙️</button>
+</header>
+
+<main>
+  <!-- 仓库状态 -->
+  <div class="card" id="repoCard">
+    <h2>目标仓库</h2>
+    <div id="repoInfo" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div id="repoName" style="font-size:16px;font-weight:600">未配置</div>
+        <div id="repoUrl" style="font-size:12px;color:var(--text2);margin-top:2px"></div>
+      </div>
+      <span class="badge badge-private" id="repoBadge">private</span>
+    </div>
+  </div>
+
+  <!-- 自动扫描 -->
+  <div class="card">
+    <h2>🔍 自动扫描大文件</h2>
+    <div class="row" style="flex-wrap:wrap;gap:6px">
+      <label style="min-width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" id="scanVideo" checked> 🎬 视频</label>
+      <label style="min-width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" id="scanImage" checked> 🖼️ 图片</label>
+      <label style="min-width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" id="scanAudio" checked> 🎵 音频</label>
+      <label style="min-width:auto;display:flex;align-items:center;gap:4px"><input type="checkbox" id="scanDocs"> 📄 文档</label>
+    </div>
+    <div class="row">
+      <label style="min-width:auto">最小大小</label>
+      <select id="minSize" style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:9px;border-radius:8px;font-size:14px">
+        <option value="0">不限</option>
+        <option value="1">1 MB</option>
+        <option value="5">5 MB</option>
+        <option value="10" selected>10 MB</option>
+        <option value="50">50 MB</option>
+        <option value="80">80 MB</option>
+      </select>
+    </div>
+    <button class="btn" id="scanBtn">🔍 扫描本机大文件</button>
+    <div class="log hidden" id="scanLog"></div>
+  </div>
+
+  <!-- 文件选择 -->
+  <div class="card">
+    <h2>选择文件</h2>
+    <div class="picker-actions">
+      <button class="btn btn-secondary" id="pickFilesBtn">📁 选择文件</button>
+      <button class="btn btn-secondary" id="pickFolderBtn">📂 选择文件夹</button>
+      <button class="btn btn-secondary" id="clearBtn" style="width:auto">清空</button>
+    </div>
+    <div class="picker hidden" id="pickerTip">
+      <div class="big">📥</div>
+      <p>点击上方按钮选择要归档的文件或文件夹</p>
+    </div>
+
+    <div id="filePanel" class="hidden">
+      <div class="toolbar">
+        <label><input type="checkbox" id="selectAll"> 全选</label>
+        <span class="count" id="countInfo">0 个文件</span>
+      </div>
+      <ul class="file-list" id="fileList"></ul>
+    </div>
+  </div>
+
+  <!-- 上传操作 -->
+  <div class="card" id="uploadCard">
+    <h2>上传到私有仓库</h2>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;min-width:auto">
+      <input type="checkbox" id="deleteAfterUpload">
+      <span>上传成功后删除本地文件 <small style="color:var(--warn)">（桌面 Chrome 可自动删除；手机端需手动删除）</small></span>
+    </label>
+    <button class="btn" id="uploadBtn" disabled>🚀 上传选中的文件</button>
+    <div class="progress-wrap hidden" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">准备中...</div>
+    </div>
+    <div class="log hidden" id="logBox"></div>
+  </div>
+</main>
+
+<footer>
+  基于 GitHub 私有仓库的文件归档工具 · 单文件不超过 100MB
+</footer>
+
+<!-- 设置弹窗 -->
+<div class="modal-overlay hidden" id="settingsModal">
+  <div class="modal">
+    <h3>⚙️ 设置</h3>
+    <div class="row"><label>Token</label><input type="password" id="cfgToken" placeholder="ghp_..."></div>
+    <div class="row"><label>用户名</label><input type="text" id="cfgOwner" placeholder="wilson-wf"></div>
+    <div class="row"><label>仓库名</label><input type="text" id="cfgRepo" placeholder="personal-archive"></div>
+    <div class="row"><label>分支</label><input type="text" id="cfgBranch" placeholder="main"></div>
+    <button class="btn" id="saveSettingsBtn">保存设置</button>
+    <button class="btn btn-secondary" id="closeSettingsBtn" style="margin-top:8px">取消</button>
+  </div>
+</div>
+
+<!-- 删除确认弹窗 -->
+<div class="modal-overlay hidden" id="deleteModal">
+  <div class="modal">
+    <h3>🗑️ 删除本地文件</h3>
+    <p id="deleteMsg">已成功上传 N 个文件，是否删除本地文件？</p>
+    <button class="btn btn-danger" id="confirmDeleteBtn">确认删除本地文件</button>
+    <button class="btn btn-secondary" id="cancelDeleteBtn" style="margin-top:8px">保留本地文件</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" multiple hidden>
+<input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+
+<script>
+// ============== 配置管理 ==============
+const CFG_KEY = 'github_archive_cfg';
+function loadCfg() {
+  const def = { token: '', owner: 'wilson-wf', repo: 'personal-archive', branch: 'main' };
+  try { return { ...def, ...JSON.parse(localStorage.getItem(CFG_KEY) || '{}') }; }
+  catch { return def; }
+}
+function saveCfg(cfg) { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+let cfg = loadCfg();
+
+// ============== DOM 引用 ==============
+const $ = id => document.getElementById(id);
+const settingsModal = $('settingsModal');
+const deleteModal = $('deleteModal');
+
+// ============== 设置 UI ==============
+function openSettings() {
+  $('cfgToken').value = cfg.token || '';
+  $('cfgOwner').value = cfg.owner || '';
+  $('cfgRepo').value = cfg.repo || '';
+  $('cfgBranch').value = cfg.branch || 'main';
+  settingsModal.classList.remove('hidden');
+}
+$('settingsBtn').onclick = openSettings;
+$('closeSettingsBtn').onclick = () => settingsModal.classList.add('hidden');
+$('saveSettingsBtn').onclick = () => {
+  cfg = {
+    token: $('cfgToken').value.trim(),
+    owner: $('cfgOwner').value.trim(),
+    repo: $('cfgRepo').value.trim(),
+    branch: $('cfgBranch').value.trim() || 'main'
+  };
+  saveCfg(cfg);
+  settingsModal.classList.add('hidden');
+  updateRepoInfo();
+};
+
+function updateRepoInfo() {
+  if (cfg.token && cfg.owner && cfg.repo) {
+    $('repoName').textContent = `${cfg.owner}/${cfg.repo}`;
+    $('repoUrl').textContent = `https://github.com/${cfg.owner}/${cfg.repo}`;
+    $('repoBadge').classList.remove('hidden');
+    $('uploadBtn').disabled = files.length === 0;
+  } else {
+    $('repoName').textContent = '未配置 Token';
+    $('repoUrl').textContent = '点击右上角 ⚙️ 配置 GitHub Token';
+    $('repoBadge').classList.add('hidden');
+    $('uploadBtn').disabled = true;
+  }
+}
+
+// ============== 文件管理 ==============
+let files = []; // {file, id, status}
+let selectedIds = new Set();
+let nextId = 1;
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+  return (bytes/1024/1024/1024).toFixed(2) + ' GB';
+}
+
+function addFiles(fileList) {
+  const minBytes = (parseFloat($('minSize').value) || 0) * 1024 * 1024;
+  let added = 0, filtered = 0;
+  for (const f of fileList) {
+    // webkitRelativePath 用于文件夹选择
+    const relPath = f.webkitRelativePath || f.name;
+    // 如果扫描过滤已开启，按类型和大小过滤
+    if (minBytes > 0 || $('scanVideo').checked || $('scanImage').checked || $('scanAudio').checked || $('scanDocs').checked) {
+      const type = getMediaType(f.name);
+      const okType = (type === 'video' && $('scanVideo').checked) ||
+                     (type === 'image' && $('scanImage').checked) ||
+                     (type === 'audio' && $('scanAudio').checked) ||
+                     (type === 'docs'  && $('scanDocs').checked);
+      if (!okType) { filtered++; continue; }
+      if (f.size < minBytes) { filtered++; continue; }
+      if (f.size > 100 * 1024 * 1024) { filtered++; continue; }
+    }
+    files.push({ file: f, id: nextId++, relPath, status: 'pending', error: '' });
+    selectedIds.add(nextId - 1);
+    added++;
+  }
+  if (filtered > 0) {
+    scanLog(`手动选择: 添加 ${added} 个，过滤掉 ${filtered} 个（不符合类型/大小条件）`, '');
+  }
+  renderFileList();
+}
+
+function renderFileList() {
+  const list = $('fileList');
+  const panel = $('filePanel');
+  const tip = $('pickerTip');
+  if (files.length === 0) {
+    panel.classList.add('hidden');
+    tip.classList.remove('hidden');
+    $('countInfo').textContent = '0 个文件';
+    return;
+  }
+  panel.classList.remove('hidden');
+  tip.classList.add('hidden');
+
+  list.innerHTML = files.map(item => {
+    const checked = selectedIds.has(item.id) ? 'checked' : '';
+    let statusCls = 'status-pending', statusTxt = '待上传';
+    if (item.status === 'uploading') { statusCls = 'status-uploading'; statusTxt = '上传中'; }
+    if (item.status === 'success') { statusCls = 'status-success'; statusTxt = '✓ 成功'; }
+    if (item.status === 'error') { statusCls = 'status-error'; statusTxt = '✗ 失败'; }
+    return `<li class="file-item">
+      <input type="checkbox" data-id="${item.id}" ${checked}>
+      <span class="file-name" title="${item.relPath}">${item.relPath}</span>
+      <span class="file-size">${fmtSize(item.file.size)}</span>
+      <span class="file-status ${statusCls}">${statusTxt}</span>
+    </li>`;
+  }).join('');
+
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.onchange = () => {
+      const id = +cb.dataset.id;
+      if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+      updateSelectAll();
+      $('uploadBtn').disabled = selectedIds.size === 0 || !cfg.token;
+    };
+  });
+
+  const selCount = selectedIds.size;
+  const totalSize = files.filter(f => selectedIds.has(f.id)).reduce((s,f) => s + f.file.size, 0);
+  $('countInfo').textContent = `${selCount}/${files.length} 个 · ${fmtSize(totalSize)}`;
+  updateSelectAll();
+  $('uploadBtn').disabled = selectedIds.size === 0 || !cfg.token;
+}
+
+function updateSelectAll() {
+  $('selectAll').checked = files.length > 0 && selectedIds.size === files.length;
+}
+
+$('selectAll').onchange = (e) => {
+  if (e.target.checked) files.forEach(f => selectedIds.add(f.id));
+  else selectedIds.clear();
+  renderFileList();
+  $('uploadBtn').disabled = selectedIds.size === 0 || !cfg.token;
+};
+
+$('pickFilesBtn').onclick = () => $('fileInput').click();
+$('pickFolderBtn').onclick = () => $('folderInput').click();
+$('fileInput').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+$('folderInput').onchange = (e) => { addFiles(e.target.files); e.target.value = ''; };
+$('clearBtn').onclick = () => {
+  files = []; selectedIds.clear();
+  renderFileList();
+  $('uploadBtn').disabled = true;
+  $('progressWrap').classList.add('hidden');
+  $('logBox').classList.add('hidden');
+  $('scanLog').classList.add('hidden');
+};
+
+// ============== 自动扫描大文件 ==============
+const MEDIA_EXT = {
+  video: ['mp4','mov','avi','mkv','flv','wmv','m4v','webm','3gp','mpg','mpeg','ts'],
+  image: ['jpg','jpeg','png','gif','bmp','heic','heif','webp','tiff','raw','cr2','nef','arw','dng','svg'],
+  audio: ['mp3','wav','flac','aac','ogg','m4a','wma','amr','opus','aiff','alac'],
+  docs:  ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','zip','rar','7z','tar','gz']
+};
+
+function getMediaType(filename) {
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  for (const [type, exts] of Object.entries(MEDIA_EXT)) {
+    if (exts.includes(ext)) return type;
+  }
+  return null;
+}
+
+function scanLog(msg, type='') {
+  const box = $('scanLog');
+  box.classList.remove('hidden');
+  const span = document.createElement('span');
+  span.className = type;
+  span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+$('scanBtn').onclick = async () => {
+  const wantVideo = $('scanVideo').checked;
+  const wantImage = $('scanImage').checked;
+  const wantAudio = $('scanAudio').checked;
+  const wantDocs  = $('scanDocs').checked;
+  const minMB = parseFloat($('minSize').value) || 0;
+  const minBytes = minMB * 1024 * 1024;
+
+  if (!wantVideo && !wantImage && !wantAudio && !wantDocs) {
+    alert('请至少勾选一种文件类型');
+    return;
+  }
+
+  $('scanLog').innerHTML = '';
+  $('scanLog').classList.remove('hidden');
+  scanLog('开始扫描...请在弹窗中选择要扫描的文件夹');
+
+  // 桌面 Chrome: showDirectoryPicker 递归扫描
+  if ('showDirectoryPicker' in window) {
+    try {
+      const handle = await window.showDirectoryPicker();
+      scanLog(`已选择文件夹: ${handle.name}`);
+      const results = [];
+      let scanned = 0, skipped = 0;
+
+      async function scanDir(dirHandle, prefix) {
+        for await (const entry of dirHandle.values()) {
+          if (entry.kind === 'file') {
+            scanned++;
+            const type = getMediaType(entry.name);
+            if (!type) { skipped++; continue; }
+            const okType = (type === 'video' && wantVideo) ||
+                           (type === 'image' && wantImage) ||
+                           (type === 'audio' && wantAudio) ||
+                           (type === 'docs'  && wantDocs);
+            if (!okType) { skipped++; continue; }
+            try {
+              const file = await entry.getFile();
+              if (file.size < minBytes) { skipped++; continue; }
+              // 跳过超过 100MB 的文件（GitHub 限制）
+              if (file.size > 100 * 1024 * 1024) {
+                scanLog(`⚠️ 跳过(超过100MB): ${prefix}${entry.name} (${fmtSize(file.size)})`, 'warn');
+                skipped++;
+                continue;
+              }
+              results.push({ file, path: prefix + entry.name, type });
+            } catch(e) { skipped++; }
+          } else if (entry.kind === 'directory') {
+            await scanDir(entry, prefix + entry.name + '/');
+          }
+          if (scanned % 100 === 0 && scanned > 0) {
+            scanLog(`已扫描 ${scanned} 个文件...`);
+          }
+        }
+      }
+
+      await scanDir(handle, '');
+      scanLog(`扫描完成: 共扫描 ${scanned} 个文件，找到 ${results.length} 个大文件，跳过 ${skipped} 个`);
+
+      if (results.length === 0) {
+        scanLog('没有找到符合条件的大文件', 'warn');
+        return;
+      }
+
+      // 统计
+      const stats = {};
+      let totalSize = 0;
+      results.forEach(r => {
+        stats[r.type] = (stats[r.type] || { count: 0, size: 0 });
+        stats[r.type].count++;
+        stats[r.type].size += r.file.size;
+        totalSize += r.file.size;
+      });
+      const typeNames = { video: '🎬视频', image: '🖼️图片', audio: '🎵音频', docs: '📄文档' };
+      for (const [t, s] of Object.entries(stats)) {
+        scanLog(`  ${typeNames[t]}: ${s.count} 个, 共 ${fmtSize(s.size)}`);
+      }
+      scanLog(`总计: ${results.length} 个文件, ${fmtSize(totalSize)}`, 'ok');
+
+      // 按大小降序排列，自动加入文件列表
+      results.sort((a, b) => b.file.size - a.file.size);
+      for (const r of results) {
+        const id = nextId++;
+        files.push({ file: r.file, id, relPath: r.path, status: 'pending', error: '' });
+        selectedIds.add(id);
+      }
+      renderFileList();
+      scanLog(`已添加 ${results.length} 个文件到列表，全部已选中`, 'ok');
+
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        scanLog('扫描已取消', 'warn');
+      } else {
+        scanLog(`扫描失败: ${e.message}`, 'err');
+      }
+    }
+    return;
+  }
+
+  // 移动端降级: 用 webkitdirectory 选文件夹
+  scanLog('当前浏览器不支持自动扫描，请使用"选择文件夹"手动选取', 'warn');
+  scanLog('手机端请点击下方"📂 选择文件夹"按钮', 'warn');
+  $('folderInput').click();
+};
+
+// ============== 日志 ==============
+function log(msg, type='') {
+  const box = $('logBox');
+  box.classList.remove('hidden');
+  const span = document.createElement('span');
+  span.className = type;
+  span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ============== GitHub API ==============
+const GH_API = 'https://api.github.com';
+function ghHeaders(extra={}) {
+  return {
+    'Authorization': `token ${cfg.token}`,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+    ...extra
+  };
+}
+
+async function ghFetch(url, opts={}) {
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { message: text }; }
+  if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+  return data;
+}
+
+// 用 Git Data API 批量提交
+async function uploadToGithub(itemsToUpload) {
+  if (!cfg.token) throw new Error('请先配置 GitHub Token');
+
+  log(`开始上传 ${itemsToUpload.length} 个文件到 ${cfg.owner}/${cfg.repo}:${cfg.branch}`);
+
+  // 1. 获取当前分支的 commit（空仓库会 404）
+  let baseTree = null;
+  let commitSha = null;
+  let isEmpty = false;
+  try {
+    const ref = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/ref/heads/${cfg.branch}`);
+    commitSha = ref.object.sha;
+    const commit = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/commits/${commitSha}`);
+    baseTree = commit.tree.sha;
+    log(`当前 commit: ${commitSha.substring(0,8)}`);
+  } catch (e) {
+    if (e.message.includes('Not Found') || e.message.includes('404') || e.message.includes('empty') || e.message.includes('409')) {
+      isEmpty = true;
+      log('仓库为空，正在初始化...', 'warn');
+      // 用 Contents API 创建 README.md 来初始化仓库（创建首个 commit + 分支）
+      const initContent = btoa(`# ${cfg.repo}\n\n私有文件归档仓库\n`);
+      await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/contents/README.md`, {
+        method: 'PUT',
+        headers: ghHeaders(),
+        body: JSON.stringify({
+          message: 'init: create README',
+          content: initContent,
+          branch: cfg.branch
+        })
+      });
+      log('仓库已初始化', 'ok');
+      // 重新获取 ref
+      const ref = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/ref/heads/${cfg.branch}`);
+      commitSha = ref.object.sha;
+      const commit = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/commits/${commitSha}`);
+      baseTree = commit.tree.sha;
+      isEmpty = false; // 仓库已非空，后续走正常流程
+      log(`当前 commit: ${commitSha.substring(0,8)}`);
+    } else {
+      throw e;
+    }
+  }
+
+  // 2. 为每个文件创建 blob
+  const treeEntries = [];
+  for (let i = 0; i < itemsToUpload.length; i++) {
+    const item = itemsToUpload[i];
+    item.status = 'uploading';
+    renderFileList();
+    log(`创建 blob: ${item.relPath} (${fmtSize(item.file.size)})`);
+
+    const content = await fileToBase64(item.file);
+    const blob = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/blobs`, {
+      method: 'POST',
+      headers: ghHeaders(),
+      body: JSON.stringify({ content, encoding: 'base64' })
+    });
+    treeEntries.push({
+      path: item.relPath,
+      mode: '100644',
+      type: 'blob',
+      sha: blob.sha
+    });
+
+    // 进度
+    const pct = Math.round(((i + 1) / itemsToUpload.length) * 100);
+    $('progressFill').style.width = pct + '%';
+    $('progressText').textContent = `创建 blob ${i + 1}/${itemsToUpload.length} (${pct}%)`;
+  }
+
+  // 3. 创建新 tree
+  log(`创建新的 tree（${treeEntries.length} 个文件）...`);
+  const treeBody = { tree: treeEntries };
+  if (!isEmpty && baseTree) treeBody.base_tree = baseTree;
+  const newTree = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/trees`, {
+    method: 'POST',
+    headers: ghHeaders(),
+    body: JSON.stringify(treeBody)
+  });
+
+  // 4. 创建 commit
+  const msg = `归档文件 ${new Date().toISOString()} (${itemsToUpload.length} files)`;
+  log(`创建 commit: ${msg}`);
+  const commitBody = { message: msg, tree: newTree.sha };
+  if (!isEmpty && commitSha) commitBody.parents = [commitSha];
+  const newCommit = await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/commits`, {
+    method: 'POST',
+    headers: ghHeaders(),
+    body: JSON.stringify(commitBody)
+  });
+
+  // 5. 创建或更新分支 ref
+  if (isEmpty) {
+    log(`创建分支 ${cfg.branch}...`);
+    await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/refs`, {
+      method: 'POST',
+      headers: ghHeaders(),
+      body: JSON.stringify({ ref: `refs/heads/${cfg.branch}`, sha: newCommit.sha })
+    });
+  } else {
+    log(`更新分支 ${cfg.branch}...`);
+    await ghFetch(`${GH_API}/repos/${cfg.owner}/${cfg.repo}/git/refs/heads/${cfg.branch}`, {
+      method: 'PATCH',
+      headers: ghHeaders(),
+      body: JSON.stringify({ sha: newCommit.sha })
+    });
+  }
+
+  log(`✓ 提交成功: ${newCommit.sha.substring(0,8)}`, 'ok');
+  return newCommit.sha;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const b64 = reader.result.split(',')[1] || reader.result;
+      resolve(b64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ============== 上传主流程 ==============
+$('uploadBtn').onclick = async () => {
+  const items = files.filter(f => selectedIds.has(f.id) && f.status !== 'success');
+  if (items.length === 0) return;
+
+  // 检查文件大小
+  const tooBig = items.filter(f => f.file.size > 100 * 1024 * 1024);
+  if (tooBig.length > 0) {
+    alert(`有 ${tooBig.length} 个文件超过 100MB，GitHub 不允许上传，请先排除：\n${tooBig.map(f=>f.relPath).join('\n')}`);
+    return;
+  }
+
+  $('uploadBtn').disabled = true;
+  $('progressWrap').classList.remove('hidden');
+  $('progressFill').style.width = '0%';
+  $('progressText').textContent = '准备中...';
+
+  // 清空旧日志
+  $('logBox').innerHTML = '';
+  $('logBox').classList.remove('hidden');
+
+  // 分批处理（每批 30 个文件，避免单次 tree 过大）
+  const BATCH = 30;
+  let successCount = 0;
+  let errorCount = 0;
+
+  for (let i = 0; i < items.length; i += BATCH) {
+    const batch = items.slice(i, i + BATCH);
+    const batchNum = Math.floor(i / BATCH) + 1;
+    const totalBatches = Math.ceil(items.length / BATCH);
+    log(`--- 批次 ${batchNum}/${totalBatches} ---`);
+    try {
+      await uploadToGithub(batch);
+      batch.forEach(f => { f.status = 'success'; });
+      successCount += batch.length;
+    } catch (err) {
+      log(`批次上传失败: ${err.message}`, 'err');
+      batch.forEach(f => { f.status = 'error'; f.error = err.message; });
+      errorCount += batch.length;
+    }
+    renderFileList();
+  }
+
+  $('progressFill').style.width = '100%';
+  $('progressText').textContent = `完成：成功 ${successCount}，失败 ${errorCount}`;
+  log(`=== 上传完成：成功 ${successCount}，失败 ${errorCount} ===`, successCount > 0 ? 'ok' : 'err');
+
+  // 询问是否删除本地文件
+  if (successCount > 0 && $('deleteAfterUpload').checked) {
+    showDeleteConfirm(successCount, items.filter(f => f.status === 'success'));
+  }
+
+  $('uploadBtn').disabled = false;
+};
+
+// ============== 删除本地文件 ==============
+let dirHandle = null; // 文件夹句柄（桌面 Chrome）
+
+function showDeleteConfirm(count, items) {
+  $('deleteMsg').textContent = `已成功上传 ${count} 个文件。是否删除本地文件？\n\n注意：桌面 Chrome 可自动删除；手机端浏览器无法自动删除，需在文件管理器中手动删除。`;
+  deleteModal.dataset.items = JSON.stringify(items.map(i => i.id));
+  deleteModal.classList.remove('hidden');
+}
+
+$('cancelDeleteBtn').onclick = () => deleteModal.classList.add('hidden');
+$('confirmDeleteBtn').onclick = () => {
+  deleteModal.classList.add('hidden');
+  deleteLocalFiles();
+};
+
+async function deleteLocalFiles() {
+  const ids = JSON.parse(deleteModal.dataset.items || '[]');
+  const items = files.filter(f => ids.includes(f.id));
+
+  // 尝试使用 File System Access API（桌面 Chrome）
+  if ('showDirectoryPicker' in window) {
+    try {
+      log('请在弹窗中选择文件所在的文件夹以授权删除...', 'warn');
+      dirHandle = await window.showDirectoryPicker();
+      let deleted = 0;
+      for (const item of items) {
+        try {
+          await dirHandle.removeEntry(item.relPath, { recursive: true });
+          deleted++;
+          log(`已删除: ${item.relPath}`, 'ok');
+        } catch (e) {
+          log(`删除失败: ${item.relPath} - ${e.message}`, 'err');
+        }
+      }
+      log(`自动删除完成：${deleted}/${items.length}`, 'ok');
+      return;
+    } catch (e) {
+      log(`授权取消或不支持自动删除: ${e.message}`, 'warn');
+    }
+  }
+
+  // 降级：显示文件列表供手动删除
+  log('当前浏览器不支持自动删除，请手动删除以下文件：', 'warn');
+  items.forEach(f => log(`  - ${f.relPath}`));
+  alert('已列出需要手动删除的文件，请在手机文件管理器中删除以上文件。');
+}
+
+// ============== 初始化 ==============
+updateRepoInfo();
+renderFileList();
+
+// PWA service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
